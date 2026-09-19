@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boolean Circuit Lab</title>
+<style>
+:root{
+  --bg-0:#070a13;
+  --bg-1:#0b0f1c;
+  --panel:rgba(255,255,255,0.045);
+  --panel-strong:rgba(255,255,255,0.065);
+  --panel-border:rgba(148,168,255,0.16);
+  --blue:#4d9fff;
+  --blue-2:#2f6fe0;
+  --violet:#9b6bff;
+  --violet-2:#7c4dff;
+  --cyan:#5eead4;
+  --signal-on:#5ecbff;
+  --signal-off:#374260;
+  --text-0:#e9edf9;
+  --text-1:#a7b0cc;
+  --text-2:#707a99;
+  --danger:#f87171;
+  --success:#4ade80;
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:9px;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Roboto Mono", Menlo, monospace;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(77,159,255,0.14), transparent 42%),
+    radial-gradient(circle at 88% 82%, rgba(155,107,255,0.13), transparent 46%),
+    var(--bg-0);
+  color:var(--text-0);
+  font-family:var(--font-ui);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+button{font-family:inherit;}
+::selection{background:rgba(93,159,255,0.35);}
+
+/* ---------- layout shell ---------- */
+.app{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 20px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(15,20,36,0.7), rgba(15,20,36,0.2));
+  backdrop-filter:blur(10px);
+  position:sticky;
+  top:0;
+  z-index:40;
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;
+  background:linear-gradient(135deg, var(--blue), var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 18px rgba(93,159,255,0.45);
+  flex:none;
+}
+.brand-mark svg{width:19px;height:19px;}
+.brand-text h1{
+  font-size:16px;margin:0;font-weight:650;letter-spacing:0.2px;color:var(--text-0);
+}
+.brand-text p{margin:0;font-size:11.5px;color:var(--text-2);}
+.topbar-actions{display:flex;gap:8px;}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;
+  border:1px solid var(--panel-border);
+  background:var(--panel);
+  color:var(--text-1);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:transform .15s ease, border-color .15s ease, color .15s ease;
+  font-size:15px;
+}
+.icon-btn:hover{border-color:rgba(148,168,255,0.4);color:var(--text-0);transform:translateY(-1px);}
+.icon-btn:active{transform:translateY(0);}
+
+.layout{
+  flex:1;
+  display:grid;
+  grid-template-columns:172px 1fr 320px;
+  grid-template-areas:"palette canvas info";
+  gap:14px;
+  padding:14px 20px 20px;
+  min-height:0;
+}
+
+/* ---------- palette ---------- */
+.palette{
+  grid-area:palette;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-width:0;
+}
+.palette-group{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-md);
+  padding:10px;
+}
+.palette-group h3{
+  margin:2px 4px 8px;
+  font-size:10.5px;
+  color:var(--text-2);
+  font-weight:600;
+  letter-spacing:0.3px;
+}
+.palette-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.palette-grid.single{grid-template-columns:1fr;}
+.pbtn{
+  border:1px solid rgba(148,168,255,0.16);
+  background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  border-radius:var(--radius-sm);
+  padding:7px 4px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:grab;
+  color:var(--text-1);
+  touch-action:none;
+  user-select:none;
+  transition:border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.pbtn:hover{border-color:rgba(93,159,255,0.55);color:var(--text-0);transform:translateY(-1px);}
+.pbtn:active{cursor:grabbing;}
+.pbtn svg{width:44px;height:26px;overflow:visible;}
+.pbtn span{font-size:10px;font-weight:600;letter-spacing:0.2px;}
+.pbtn.disabled{opacity:0.32;pointer-events:none;}
+.pbtn .gshape{fill:rgba(93,159,255,0.14);stroke:var(--blue);stroke-width:2;}
+.pbtn .gextra,.pbtn .gstem{fill:none;stroke:var(--blue);stroke-width:2;}
+.pbtn .gbubble{fill:var(--bg-1);stroke:var(--blue);stroke-width:2;}
+.pbtn.io-btn{flex-direction:row;justify-content:center;padding:9px 4px;}
+.pbtn.io-btn span{font-size:12px;}
+
+/* ---------- canvas area ---------- */
+.canvas-area{
+  grid-area:canvas;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+  min-height:0;
+}
+.toolbar{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-md);
+  padding:7px;
+}
+.tbtn{
+  display:flex;align-items:center;gap:6px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-1);
+  padding:7px 11px;
+  border-radius:9px;
+  font-size:12.5px;
+  font-weight:560;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+  white-space:nowrap;
+}
+.tbtn .glyph{font-size:13px;}
+.tbtn:hover:not(:disabled){background:rgba(255,255,255,0.06);color:var(--text-0);}
+.tbtn:disabled{opacity:0.3;cursor:not-allowed;}
+.tbtn.primary{
+  background:linear-gradient(135deg, var(--blue-2), var(--violet-2));
+  color:#fff;border-color:transparent;
+}
+.tbtn.primary:hover:not(:disabled){filter:brightness(1.1);}
+.tbtn.danger-ghost:hover:not(:disabled){background:rgba(248,113,113,0.12);color:#ffb4b4;}
+.tbtn.challenge-btn{
+  margin-left:auto;
+  background:linear-gradient(135deg, rgba(155,107,255,0.22), rgba(93,159,255,0.18));
+  border-color:rgba(155,107,255,0.4);
+  color:#e7e1ff;
+}
+.toolbar-sep{width:1px;align-self:stretch;background:rgba(255,255,255,0.08);margin:2px 2px;}
+
+.connect-panel{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-md);
+  padding:10px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.connect-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.connect-label{font-size:10.5px;color:var(--text-2);font-weight:600;flex:none;}
+.connect-select{
+  flex:1;min-width:110px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--panel-border);
+  color:var(--text-0);
+  padding:8px 9px;border-radius:9px;
+  font-size:12.5px;font-family:var(--font-ui);
+}
+.connect-arrow{color:var(--text-2);font-size:14px;flex:none;}
+.connect-list{display:flex;flex-direction:column;gap:5px;max-height:88px;overflow-y:auto;}
+.conn-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:rgba(255,255,255,0.03);border-radius:8px;padding:5px 8px;
+  font-family:var(--font-mono);font-size:11.5px;color:var(--text-1);
+}
+.conn-del{
+  background:none;border:none;color:var(--text-2);cursor:pointer;font-size:12px;
+  width:22px;height:22px;border-radius:6px;flex:none;
+}
+.conn-del:hover{background:rgba(248,113,113,0.15);color:#ffb4b4;}
+.conn-del:disabled{opacity:0.3;pointer-events:none;}
+
+.canvas-wrapper{
+  position:relative;
+  flex:1;
+  min-height:420px;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--panel-border);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 1.4px) 0 0/26px 26px,
+    linear-gradient(160deg, rgba(20,26,46,0.85), rgba(9,12,22,0.85));
+  overflow:hidden;
+}
+.canvas-wrapper.simulate-pulse::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%, rgba(93,159,255,0.16), transparent 60%);
+  animation:pulseSweep .6s ease-out;
+}
+@keyframes pulseSweep{from{opacity:1;}to{opacity:0;}}
+#canvasSvg{width:100%;height:100%;display:block;touch-action:none;}
+
+.cycle-warning{
+  position:absolute;left:12px;right:12px;bottom:12px;
+  display:none;align-items:center;gap:8px;
+  background:rgba(248,113,113,0.14);
+  border:1px solid rgba(248,113,113,0.4);
+  color:#ffd3d3;
+  padding:9px 12px;border-radius:12px;
+  font-size:12.5px;
+  backdrop-filter:blur(6px);
+  z-index:5;
+}
+.connect-hint{
+  position:absolute;left:12px;right:12px;top:12px;
+  display:none;align-items:center;gap:8px;
+  background:rgba(155,107,255,0.16);
+  border:1px solid rgba(155,107,255,0.45);
+  color:#e7e1ff;
+  padding:9px 12px;border-radius:12px;
+  font-size:12.5px;
+  backdrop-filter:blur(6px);
+  z-index:5;
+}
+.port-out.armed{fill:var(--violet);animation:armPulse 1.1s ease-in-out infinite;}
+@keyframes armPulse{
+  0%,100%{filter:drop-shadow(0 0 2px var(--violet));}
+  50%{filter:drop-shadow(0 0 10px var(--violet));}
+}
+
+/* ---------- gate / wire svg styling ---------- */
+.gate-body{fill:rgba(30,38,64,0.9);stroke:var(--blue);stroke-width:2;transition:stroke .15s ease, filter .15s ease;}
+.gate-extra,.gate-stem{fill:none;stroke:var(--blue);stroke-width:2;}
+.gate-bubble{fill:rgba(30,38,64,0.9);stroke:var(--blue);stroke-width:2;}
+.node-group.selected .gate-body{stroke:var(--violet);filter:drop-shadow(0 0 7px rgba(155,107,255,0.8));}
+.node-group.selected .input-panel{stroke:var(--violet);filter:drop-shadow(0 0 7px rgba(155,107,255,0.8));}
+.gate-label{fill:var(--text-1);font-size:11px;font-family:var(--font-mono);text-anchor:middle;}
+.node-hit{fill:transparent;}
+.port{fill:#101627;stroke:var(--cyan);stroke-width:2;cursor:crosshair;transition:r .12s ease, fill .12s ease;}
+.port-out:hover, .port-in:hover{r:8;fill:rgba(94,234,212,0.35);}
+.port-in.filled{fill:var(--cyan);}
+
+.input-panel{fill:rgba(30,38,64,0.92);stroke:var(--blue);stroke-width:2;}
+.input-letter{fill:var(--text-0);font-size:15px;font-weight:700;text-anchor:middle;font-family:var(--font-mono);}
+.track-bg{fill:var(--signal-off);stroke:rgba(255,255,255,0.08);}
+.track-bg.on{fill:var(--blue-2);}
+.track-knob{fill:#e9edf9;transition:cx .18s cubic-bezier(.4,1.6,.5,1);}
+.track-lbl{fill:var(--text-2);font-size:8px;font-family:var(--font-mono);}
+
+.led-glow{fill:var(--signal-on);opacity:0;transition:opacity .18s ease;filter:blur(6px);}
+.led{fill:#141a2c;stroke:var(--signal-off);stroke-width:2;transition:fill .18s ease, stroke .18s ease;}
+.led.on{fill:rgba(94,234,212,0.25);stroke:var(--signal-on);}
+.led.on ~ .led-glow, .output-node.on .led-glow{opacity:0.55;}
+.led-value{fill:var(--text-0);font-size:13px;font-weight:700;text-anchor:middle;font-family:var(--font-mono);}
+.output-label{fill:var(--text-2);font-size:10.5px;text-anchor:middle;font-family:var(--font-mono);}
+
+.wire-visible{fill:none;stroke-width:2.4;stroke:var(--signal-off);transition:stroke .15s ease;}
+.wire-visible.on{stroke:var(--signal-on);filter:url(#glow);}
+.wire-visible.unknown{stroke:#4a5578;stroke-dasharray:5 4;}
+.wire-hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;}
+.wire-hit.selected + .wire-visible, .wire-visible.selected{stroke:var(--violet);filter:url(#glow);stroke-width:3.2;}
+#tempWire{fill:none;stroke:var(--violet);stroke-width:2.2;stroke-dasharray:6 5;pointer-events:none;}
+
+.drag-ghost{
+  position:fixed;z-index:999;pointer-events:none;
+  padding:8px 12px;border-radius:10px;
+  background:linear-gradient(135deg, rgba(77,159,255,0.35), rgba(155,107,255,0.35));
+  border:1px solid rgba(255,255,255,0.35);
+  color:#fff;font-size:11.5px;font-weight:700;font-family:var(--font-mono);
+  transform:translate(-50%,-50%);
+  box-shadow:0 6px 20px rgba(0,0,0,0.4);
+}
+
+/* ---------- info panel ---------- */
+.info-panel{
+  grid-area:info;
+  display:flex;flex-direction:column;
+  min-width:0;min-height:0;
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.07);}
+.tab{
+  flex:1;padding:11px 6px;text-align:center;
+  font-size:12px;font-weight:600;color:var(--text-2);
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:color .15s ease, border-color .15s ease;
+}
+.tab.active{color:var(--text-0);border-color:var(--blue);}
+.tab-content{display:none;flex:1;overflow-y:auto;padding:14px;}
+.tab-content.active{display:block;}
+.panel-empty{color:var(--text-2);font-size:12.5px;line-height:1.5;padding:10px 2px;}
+
+.expr-line{margin-bottom:14px;}
+.expr-name{font-family:var(--font-mono);color:var(--cyan);font-size:12px;font-weight:700;}
+.expr-body{
+  display:block;margin-top:5px;font-family:var(--font-mono);
+  font-size:15px;line-height:1.7;color:var(--text-0);
+  word-break:break-word;
+}
+.ovl{text-decoration:overline;text-decoration-thickness:2px;padding-top:2px;}
+
+.step-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 9px;border-radius:9px;background:rgba(255,255,255,0.03);
+  margin-bottom:6px;font-size:12px;font-family:var(--font-mono);
+}
+.step-row .sname{color:var(--text-1);font-weight:700;}
+.step-row .sexpr{color:var(--text-2);flex:1;margin:0 8px;overflow-x:auto;white-space:nowrap;}
+.chip{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:20px;height:20px;padding:0 5px;border-radius:6px;
+  font-size:11px;font-weight:800;font-family:var(--font-mono);
+  background:var(--signal-off);color:#c7d0e8;
+}
+.chip.on{background:rgba(94,234,212,0.22);color:var(--signal-on);}
+.chip.unknown{background:transparent;border:1px dashed var(--text-2);color:var(--text-2);}
+
+table.truth{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px;}
+table.truth th, table.truth td{padding:6px 5px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);}
+table.truth th{color:var(--text-2);font-weight:600;font-size:10.5px;letter-spacing:0.2px;}
+table.truth td{color:var(--text-0);}
+table.truth td.out-cell.on{color:var(--signal-on);font-weight:800;}
+table.truth tr.current-row{background:rgba(93,159,255,0.09);}
+.truth-scroll{overflow-x:auto;}
+
+/* ---------- modal / challenge overlay ---------- */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(4,6,12,0.6);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:200;padding:20px;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  background:linear-gradient(160deg, rgba(24,30,52,0.98), rgba(14,18,32,0.98));
+  border:1px solid var(--panel-border);border-radius:var(--radius-lg);
+  max-width:420px;width:100%;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h2{margin:0 0 12px;font-size:17px;}
+.modal ul{margin:0;padding-left:18px;color:var(--text-1);font-size:13px;line-height:1.9;}
+.modal .close-row{margin-top:18px;text-align:right;}
+
+.challenge-panel{
+  position:absolute;left:12px;top:12px;right:12px;
+  display:none;
+  background:rgba(15,19,34,0.85);
+  border:1px solid rgba(155,107,255,0.35);
+  border-radius:14px;padding:12px 14px;
+  backdrop-filter:blur(8px);
+  z-index:6;
+}
+.challenge-panel.show{display:block;}
+.challenge-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.challenge-title{font-size:12.5px;font-weight:700;color:#e7e1ff;}
+.challenge-score{font-family:var(--font-mono);font-size:11.5px;color:var(--text-1);}
+.challenge-q{margin-top:8px;font-size:12.5px;color:var(--text-1);}
+.predict-row{display:flex;gap:8px;margin-top:10px;}
+.predict-btn{
+  flex:1;padding:9px;border-radius:10px;border:1px solid rgba(148,168,255,0.3);
+  background:rgba(255,255,255,0.05);color:var(--text-0);font-family:var(--font-mono);
+  font-weight:800;font-size:14px;cursor:pointer;
+}
+.predict-btn:hover{border-color:var(--blue);}
+.challenge-feedback{margin-top:10px;font-size:12.5px;padding:9px 10px;border-radius:10px;display:none;}
+.challenge-feedback.correct{display:block;background:rgba(74,222,128,0.13);color:#bdf6cf;border:1px solid rgba(74,222,128,0.35);}
+.challenge-feedback.incorrect{display:block;background:rgba(248,113,113,0.13);color:#ffd3d3;border:1px solid rgba(248,113,113,0.35);}
+.challenge-actions{display:flex;gap:8px;margin-top:10px;}
+.challenge-actions .tbtn{flex:1;justify-content:center;background:rgba(255,255,255,0.05);}
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px){
+  .layout{
+    grid-template-columns:1fr;
+    grid-template-areas:"palette" "canvas" "info";
+    padding:10px 10px 16px;
+  }
+  .palette{flex-direction:row;overflow-x:auto;padding-bottom:2px;}
+  .palette-group{flex:none;min-width:168px;}
+  .info-panel{min-height:280px;}
+  .canvas-wrapper{min-height:360px;}
+  .topbar{padding:11px 12px;}
+  .brand-text p{display:none;}
+}
+@media (max-width:520px){
+  .tbtn span.tlabel{display:none;}
+  .tbtn{padding:8px 9px;}
+  .toolbar{gap:4px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h4M16 12h4M8 6v12M16 6v12M8 6h8M8 18h8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>Boolean Circuit Lab</h1>
+        <p>Design, wire, and simulate logic circuits</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="helpBtn" title="Help">?</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- PALETTE -->
+    <aside class="palette">
+      <div class="palette-group">
+        <h3>Gates</h3>
+        <div class="palette-grid" id="gatePalette"></div>
+      </div>
+      <div class="palette-group">
+        <h3>Inputs</h3>
+        <div class="palette-grid" id="inputPalette"></div>
+      </div>
+      <div class="palette-group">
+        <h3>Output</h3>
+        <div class="palette-grid single" id="outputPalette"></div>
+      </div>
+    </aside>
+
+    <!-- CANVAS -->
+    <section class="canvas-area">
+      <div class="toolbar">
+        <button class="tbtn" id="undoBtn"><span class="glyph">↶</span><span class="tlabel">Undo</span></button>
+        <button class="tbtn" id="redoBtn"><span class="glyph">↷</span><span class="tlabel">Redo</span></button>
+        <div class="toolbar-sep"></div>
+        <button class="tbtn" id="deleteBtn" disabled><span class="glyph">✕</span><span class="tlabel">Delete</span></button>
+        <button class="tbtn" id="resetBtn"><span class="glyph">⟲</span><span class="tlabel">Reset switches</span></button>
+        <button class="tbtn danger-ghost" id="clearBtn"><span class="glyph">🗑</span><span class="tlabel">Clear canvas</span></button>
+        <div class="toolbar-sep"></div>
+        <button class="tbtn primary" id="runBtn"><span class="glyph">▶</span><span class="tlabel">Run</span></button>
+        <button class="tbtn challenge-btn" id="challengeBtn"><span class="glyph">◆</span><span class="tlabel">Challenge mode</span></button>
+      </div>
+
+      <div class="connect-panel">
+        <div class="connect-row">
+          <span class="connect-label">From</span>
+          <select class="connect-select" id="connectFrom"></select>
+          <span class="connect-arrow">→</span>
+          <span class="connect-label">To</span>
+          <select class="connect-select" id="connectTo"></select>
+          <button class="tbtn primary" id="connectBtn">Connect</button>
+        </div>
+        <div class="connect-list" id="connectionList"></div>
+      </div>
+
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <svg id="canvasSvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3.4" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <g id="wiresLayer"></g>
+          <g id="nodesLayer"></g>
+          <path id="tempWire" d=""></path>
+        </svg>
+        <div class="connect-hint" id="connectHint">
+          <span>●</span>
+          <span>Now tap the gate or output you want to connect it to — tap the same dot again to cancel.</span>
+        </div>
+        <div class="cycle-warning" id="cycleWarning">
+          <span>⚠</span>
+          <span>This circuit loops back on itself, so it can't be evaluated. Remove a connection to break the loop.</span>
+        </div>
+        <div class="challenge-panel" id="challengePanel">
+          <div class="challenge-top">
+            <span class="challenge-title" id="challengeTitle">Challenge</span>
+            <span class="challenge-score" id="challengeScore">Score: 0/0</span>
+          </div>
+          <div class="challenge-q" id="challengeQ">Trace the circuit above. What will the output be for the switches shown?</div>
+          <div class="predict-row" id="predictRow">
+            <button class="predict-btn" data-guess="0">Predict 0</button>
+            <button class="predict-btn" data-guess="1">Predict 1</button>
+          </div>
+          <div class="challenge-feedback" id="challengeFeedback"></div>
+          <div class="challenge-actions">
+            <button class="tbtn" id="nextChallengeBtn" style="display:none;">Next circuit</button>
+            <button class="tbtn" id="exitChallengeBtn">Exit challenge</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INFO PANEL -->
+    <aside class="info-panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="expr">Expression</div>
+        <div class="tab" data-tab="steps">Steps</div>
+        <div class="tab" data-tab="truth">Truth table</div>
+      </div>
+      <div class="tab-content active" id="tab-expr"></div>
+      <div class="tab-content" id="tab-steps"></div>
+      <div class="tab-content" id="tab-truth"></div>
+    </aside>
+
+  </div>
+</div>
+
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal">
+    <h2>How this works</h2>
+    <ul>
+      <li>Drag a gate, switch, or output from the left onto the canvas.</li>
+      <li>To wire two things together, either: drag from one dot to another, <b>or</b> tap the output dot (it starts glowing) then tap the input dot you want it to reach — no dragging needed.</li>
+      <li>Prefer typing? Use the "From / To" dropdowns above the canvas and press Connect. The list below it shows every wire in plain words, with a ✕ to remove one.</li>
+      <li>Tap an input switch (A, B, C, D) to flip it between 0 and 1 — connected wires light up instantly.</li>
+      <li>Tap a gate or wire to select it, then use Delete in the toolbar to remove it.</li>
+      <li>Double-tap a gate to rename its label.</li>
+      <li>Open Truth table to see every input combination, or try Challenge mode to test yourself.</li>
+    </ul>
+    <div class="close-row"><button class="tbtn primary" id="closeHelp">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ configuration ============ */
+const GATE_DEFS = {
+  INPUT:  { inputs:0, outputs:1, w:74,  h:52 },
+  OUTPUT: { inputs:1, outputs:0, w:64,  h:56 },
+  NOT:    { inputs:1, outputs:1, w:92,  h:52 },
+  AND:    { inputs:2, outputs:1, w:100, h:60 },
+  OR:     { inputs:2, outputs:1, w:110, h:60 },
+  NAND:   { inputs:2, outputs:1, w:112, h:60 },
+  NOR:    { inputs:2, outputs:1, w:122, h:60 },
+  XOR:    { inputs:2, outputs:1, w:118, h:60 },
+  XNOR:   { inputs:2, outputs:1, w:130, h:60 },
+};
+const GATE_TYPES = ["AND","OR","NOT","NAND","NOR","XOR","XNOR"];
+const BUBBLE_R = 7, BUBBLE_GAP = 3, EXTRA_GAP = 10;
+
+/* ============ shape builders ============ */
+function orShapePath(w,h,o){
+  return `M${o},0 Q${o+w*0.12},${h*0.5} ${o},${h} Q${o+w*0.6},${h} ${o+w},${h*0.5} Q${o+w*0.6},0 ${o},0 Z`;
+}
+function xorExtraPath(w,h,o){
+  const x=o-7;
+  return `M${x},0 Q${x+w*0.12},${h*0.5} ${x},${h}`;
+}
+function buildGateShape(type,w,h){
+  switch(type){
+    case 'AND': {
+      const sx=w-h/2;
+      return { body:`M0,0 H${sx} A${h/2},${h/2} 0 0 1 ${sx},${h} H0 Z` };
+    }
+    case 'NAND': {
+      const bodyW=w-(BUBBLE_R*2+BUBBLE_GAP);
+      const sx=bodyW-h/2;
+      const cx=w-BUBBLE_R;
+      return {
+        body:`M0,0 H${sx} A${h/2},${h/2} 0 0 1 ${sx},${h} H0 Z`,
+        bubble:{cx,cy:h/2,r:BUBBLE_R},
+        stem:`M${bodyW},${h/2} H${cx-BUBBLE_R}`
+      };
+    }
+    case 'OR': return { body: orShapePath(w,h,0) };
+    case 'NOR': {
+      const innerW=w-(BUBBLE_R*2+BUBBLE_GAP);
+      const cx=w-BUBBLE_R;
+      return {
+        body: orShapePath(innerW,h,0),
+        bubble:{cx,cy:h/2,r:BUBBLE_R},
+        stem:`M${innerW},${h/2} H${cx-BUBBLE_R}`
+      };
+    }
+    case 'XOR': {
+      const innerW=w-EXTRA_GAP;
+      return { body: orShapePath(innerW,h,EXTRA_GAP), extra: xorExtraPath(innerW,h,EXTRA_GAP) };
+    }
+    case 'XNOR': {
+      const innerW=w-EXTRA_GAP-(BUBBLE_R*2+BUBBLE_GAP);
+      const cx=w-BUBBLE_R;
+      const tipX=EXTRA_GAP+innerW;
+      return {
+        body: orShapePath(innerW,h,EXTRA_GAP),
+        extra: xorExtraPath(innerW,h,EXTRA_GAP),
+        bubble:{cx,cy:h/2,r:BUBBLE_R},
+        stem:`M${tipX},${h/2} H${cx-BUBBLE_R}`
+      };
+    }
+    case 'NOT': {
+      const triW=w-(BUBBLE_R*2+BUBBLE_GAP);
+      const cx=w-BUBBLE_R;
+      return { body:`M0,0 L0,${h} L${triW},${h/2} Z`, bubble:{cx,cy:h/2,r:BUBBLE_R} };
+    }
+  }
+  return { body:"" };
+}
+function gateShapeMarkup(shape){
+  let s = `<path class="gate-body" d="${shape.body}"></path>`;
+  if(shape.extra) s += `<path class="gate-extra" d="${shape.extra}"></path>`;
+  if(shape.stem) s += `<path class="gate-stem" d="${shape.stem}"></path>`;
+  if(shape.bubble) s += `<circle class="gate-bubble" cx="${shape.bubble.cx}" cy="${shape.bubble.cy}" r="${shape.bubble.r}"></circle>`;
+  return s;
+}
+
+/* ============ state ============ */
+let state = { nodes:{}, wires:{}, idCounter:1 };
+let gateCounters = {};
+let outputCounter = 0;
+let selection = null; // {type:'node'|'wire', id}
+let historyStack = [];
+let redoStack = [];
+let wireDraw = null;
+let pendingConnection = null; // {fromNode} — armed via tap-to-connect or the Quick Connect panel
+let challengeActive = false;
+let challengeReveal = false;
+let challengeSaved = null;
+let challengeIndex = -1;
+let challengeScore = {correct:0,total:0};
+let currentPreset = null;
+
+const svg = document.getElementById('canvasSvg');
+const wiresLayer = document.getElementById('wiresLayer');
+const nodesLayer = document.getElementById('nodesLayer');
+const tempWire = document.getElementById('tempWire');
+const cycleWarning = document.getElementById('cycleWarning');
+
+function uid(prefix){ return prefix + (state.idCounter++); }
+
+/* ============ geometry helpers ============ */
+function screenToSVG(clientX, clientY){
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if(!ctm) return {x:0,y:0};
+  const loc = pt.matrixTransform(ctm.inverse());
+  return {x:loc.x, y:loc.y};
+}
+function getPortPos(node, kind, index){
+  const def = GATE_DEFS[node.type];
+  const w=def.w, h=def.h;
+  if(node.type==='INPUT') return {x:node.x+w, y:node.y+h/2};
+  if(node.type==='OUTPUT') return {x:node.x, y:node.y+h/2};
+  if(node.type==='NOT') return {x: kind==='in'? node.x : node.x+w, y:node.y+h/2};
+  if(kind==='in') return {x:node.x, y:node.y+(index===0? h*0.25 : h*0.75)};
+  return {x:node.x+w, y:node.y+h/2};
+}
+function getIncoming(nodeId){
+  const node = state.nodes[nodeId];
+  const n = GATE_DEFS[node.type].inputs;
+  const arr = new Array(n).fill(null);
+  Object.values(state.wires).forEach(w=>{ if(w.toNode===nodeId) arr[w.toPort]=w.fromNode; });
+  return arr;
+}
+function wirePathD(p1,p2){
+  const mx=(p1.x+p2.x)/2;
+  return `M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`;
+}
+
+/* ============ evaluation ============ */
+function evaluateAll(overrides){
+  const values={}; const visiting=new Set(); let hasCycle=false; const order=[];
+  function evalNode(id){
+    if(values[id]!==undefined) return values[id];
+    if(visiting.has(id)){ hasCycle=true; return null; }
+    visiting.add(id);
+    const node=state.nodes[id];
+    let result=null;
+    if(node.type==='INPUT'){
+      const ov = overrides && overrides[id];
+      result = (ov!==undefined? ov : (node.value?1:0));
+    } else {
+      const ins = getIncoming(id).map(src=> src!==null? evalNode(src) : null);
+      if(ins.some(v=>v===null)) result=null;
+      else {
+        switch(node.type){
+          case 'NOT': result = ins[0]?0:1; break;
+          case 'AND': result = (ins[0]&&ins[1])?1:0; break;
+          case 'OR': result = (ins[0]||ins[1])?1:0; break;
+          case 'NAND': result = (ins[0]&&ins[1])?0:1; break;
+          case 'NOR': result = (ins[0]||ins[1])?0:1; break;
+          case 'XOR': result = (ins[0]!==ins[1])?1:0; break;
+          case 'XNOR': result = (ins[0]===ins[1])?1:0; break;
+          case 'OUTPUT': result = ins[0]; break;
+        }
+      }
+    }
+    visiting.delete(id); values[id]=result; order.push(id);
+    return result;
+  }
+  Object.keys(state.nodes).forEach(evalNode);
+  return {values, hasCycle, order};
+}
+
+function paren(html, wrapIt){ return wrapIt ? `(${html})` : html; }
+function exprFor(nodeId){
+  const node = state.nodes[nodeId];
+  if(!node) return '?';
+  if(node.type==='INPUT') return node.label;
+  const ins = getIncoming(nodeId).map(id=> id? exprFor(id) : '?');
+  const inTypes = getIncoming(nodeId).map(id=> id? state.nodes[id].type : null);
+  const wrap = t => t && ['AND','OR','NAND','NOR','XOR','XNOR'].includes(t);
+  switch(node.type){
+    case 'NOT': return `<span class="ovl">${ins[0]}</span>`;
+    case 'AND': return `${paren(ins[0],wrap(inTypes[0]))}·${paren(ins[1],wrap(inTypes[1]))}`;
+    case 'OR': return `${paren(ins[0],wrap(inTypes[0]))}+${paren(ins[1],wrap(inTypes[1]))}`;
+    case 'XOR': return `${paren(ins[0],wrap(inTypes[0]))}⊕${paren(ins[1],wrap(inTypes[1]))}`;
+    case 'NAND': return `<span class="ovl">${paren(ins[0],wrap(inTypes[0]))}·${paren(ins[1],wrap(inTypes[1]))}</span>`;
+    case 'NOR': return `<span class="ovl">${paren(ins[0],wrap(inTypes[0]))}+${paren(ins[1],wrap(inTypes[1]))}</span>`;
+    case 'XNOR': return `<span class="ovl">${paren(ins[0],wrap(inTypes[0]))}⊕${paren(ins[1],wrap(inTypes[1]))}</span>`;
+    case 'OUTPUT': return ins[0];
+  }
+  return '?';
+}
+
+/* ============ history ============ */
+function snapshot(){
+  return JSON.stringify({nodes:state.nodes, wires:state.wires, idCounter:state.idCounter, gateCounters, outputCounter});
+}
+function pushHistory(){
+  historyStack.push(snapshot());
+  if(historyStack.length>60) historyStack.shift();
+  redoStack.length=0;
+}
+function applySnap(s){
+  const p=JSON.parse(s);
+  state.nodes=p.nodes; state.wires=p.wires; state.idCounter=p.idCounter;
+  gateCounters=p.gateCounters; outputCounter=p.outputCounter;
+  selection=null;
+  renderAll();
+}
+function undo(){ if(!historyStack.length) return; redoStack.push(snapshot()); applySnap(historyStack.pop()); }
+function redo(){ if(!redoStack.length) return; historyStack.push(snapshot()); applySnap(redoStack.pop()); }
+
+/* ============ node / wire mutation ============ */
+function addNode(cfg, cx, cy){
+  if(challengeActive) return;
+  let type,label,extra={};
+  if(cfg.kind==='input'){
+    if(Object.values(state.nodes).some(n=>n.type==='INPUT'&&n.label===cfg.letter)) return;
+    type='INPUT'; label=cfg.letter; extra={value:false};
+  } else if(cfg.kind==='output'){
+    type='OUTPUT'; outputCounter++; label='OUT'+outputCounter;
+  } else {
+    type=cfg.type; gateCounters[type]=(gateCounters[type]||0)+1; label=type+gateCounters[type];
+  }
+  const def=GATE_DEFS[type];
+  pushHistory();
+  const id=uid('n');
+  state.nodes[id]=Object.assign({id,type,label,x:cx-def.w/2,y:cy-def.h/2}, extra);
+  selectItem('node', id);
+  renderAll();
+}
+function deleteSelected(){
+  if(!selection || challengeActive) return;
+  pushHistory();
+  if(selection.type==='node'){
+    const id=selection.id;
+    delete state.nodes[id];
+    Object.keys(state.wires).forEach(wid=>{ const w=state.wires[wid]; if(w.fromNode===id||w.toNode===id) delete state.wires[wid]; });
+  } else {
+    delete state.wires[selection.id];
+  }
+  selection=null;
+  renderAll();
+}
+function clearCanvas(){
+  if(challengeActive) return;
+  if(!Object.keys(state.nodes).length) return;
+  if(!confirm('Clear all gates and wires from the canvas?')) return;
+  pushHistory();
+  state.nodes={}; state.wires={}; selection=null;
+  renderAll();
+}
+function resetSwitches(){
+  Object.values(state.nodes).forEach(n=>{ if(n.type==='INPUT') n.value=false; });
+  renderAll();
+}
+function selectItem(type,id){ selection={type,id}; }
+function deselectAll(){ selection=null; renderAll(); }
+function clearPending(){ pendingConnection = null; }
+function completeConnection(fromNode, toNode, toPort){
+  if(!fromNode || !toNode || challengeActive) return;
+  pushHistory();
+  Object.keys(state.wires).forEach(wid=>{ const w=state.wires[wid]; if(w.toNode===toNode && w.toPort===toPort) delete state.wires[wid]; });
+  const wid = uid('w');
+  state.wires[wid] = {id:wid, fromNode, toNode, toPort};
+  selectItem('wire', wid);
+}
+
+/* ============ rendering ============ */
+function renderAll(){
+  const {values, hasCycle} = evaluateAll();
+  renderWires(values);
+  renderNodes(values);
+  renderExpression();
+  renderSteps(values);
+  renderTruthTable();
+  renderConnectPanel();
+  updatePaletteAvailability();
+  updateToolbarState();
+  cycleWarning.style.display = hasCycle ? 'flex' : 'none';
+  document.getElementById('connectHint').style.display = (pendingConnection && !challengeActive) ? 'flex' : 'none';
+}
+
+function renderConnectPanel(){
+  const fromSel = document.getElementById('connectFrom');
+  const toSel = document.getElementById('connectTo');
+  const connectBtn = document.getElementById('connectBtn');
+  const prevFrom = fromSel.value, prevTo = toSel.value;
+
+  const sources = Object.values(state.nodes).filter(n=>n.type!=='OUTPUT');
+  const targets = [];
+  Object.values(state.nodes).forEach(n=>{
+    if(n.type==='INPUT') return;
+    const nin = GATE_DEFS[n.type].inputs;
+    for(let i=0;i<nin;i++) targets.push({node:n, port:i});
+  });
+
+  fromSel.innerHTML = sources.length
+    ? sources.map(n=>`<option value="${n.id}">${n.label}${n.type==='INPUT'?' (switch)':''}</option>`).join('')
+    : `<option value="">add a gate or switch first</option>`;
+  toSel.innerHTML = targets.length
+    ? targets.map(t=>{
+        const existing = Object.values(state.wires).find(w=>w.toNode===t.node.id && w.toPort===t.port);
+        const src = existing ? state.nodes[existing.fromNode] : null;
+        const portLabel = GATE_DEFS[t.node.type].inputs>1 ? ` – input ${t.port+1}` : '';
+        return `<option value="${t.node.id}:${t.port}">${t.node.label}${portLabel}${src?` (replaces ${src.label})`:''}</option>`;
+      }).join('')
+    : `<option value="">add a gate or output first</option>`;
+
+  if([...fromSel.options].some(o=>o.value===prevFrom)) fromSel.value=prevFrom;
+  if([...toSel.options].some(o=>o.value===prevTo)) toSel.value=prevTo;
+
+  fromSel.disabled = toSel.disabled = connectBtn.disabled = challengeActive || !sources.length || !targets.length;
+
+  const listEl = document.getElementById('connectionList');
+  const wires = Object.values(state.wires);
+  if(!wires.length){
+    listEl.innerHTML = `<div class="panel-empty" style="padding:2px;">No connections yet — use the dropdowns above, or tap an output dot then an input dot.</div>`;
+  } else {
+    listEl.innerHTML = wires.map(w=>{
+      const fromNode = state.nodes[w.fromNode], toNode = state.nodes[w.toNode];
+      if(!fromNode||!toNode) return '';
+      const portLabel = GATE_DEFS[toNode.type].inputs>1 ? ` · in ${w.toPort+1}` : '';
+      return `<div class="conn-row"><span>${fromNode.label} → ${toNode.label}${portLabel}</span><button class="conn-del" data-wid="${w.id}" title="Remove" ${challengeActive?'disabled':''}>✕</button></div>`;
+    }).join('');
+  }
+}
+
+function renderWires(values){
+  let html='';
+  Object.values(state.wires).forEach(w=>{
+    const fromNode=state.nodes[w.fromNode], toNode=state.nodes[w.toNode];
+    if(!fromNode||!toNode) return;
+    const p1=getPortPos(fromNode,'out',0);
+    const p2=getPortPos(toNode,'in',w.toPort);
+    const d=wirePathD(p1,p2);
+    let val = values[w.fromNode];
+    let cls='wire-visible';
+    if(challengeActive && !challengeReveal){ cls+=' unknown'; }
+    else if(val===1) cls+=' on';
+    else if(val===null||val===undefined) cls+=' unknown';
+    const sel = selection && selection.type==='wire' && selection.id===w.id ? ' selected' : '';
+    html += `<path class="wire-hit${sel}" data-id="${w.id}" d="${d}"></path>`;
+    html += `<path class="${cls}${sel}" d="${d}"></path>`;
+  });
+  wiresLayer.innerHTML = html;
+}
+
+function renderNodes(values){
+  let html='';
+  Object.values(state.nodes).forEach(node=>{
+    const def=GATE_DEFS[node.type];
+    const sel = selection && selection.type==='node' && selection.id===node.id ? ' selected':'';
+    let inner='';
+    inner += `<rect class="node-hit" x="0" y="0" width="${def.w}" height="${def.h}"></rect>`;
+
+    if(node.type==='INPUT'){
+      const on=!!node.value;
+      inner += `<rect class="input-panel" x="1" y="1" width="${def.w-2}" height="${def.h-2}" rx="12"></rect>`;
+      inner += `<text class="input-letter" x="${def.w/2}" y="21">${node.label}</text>`;
+      inner += `<g transform="translate(${def.w/2-20},28)">`;
+      inner += `<text class="track-lbl" x="-6" y="12">0</text>`;
+      inner += `<rect class="track-bg${on?' on':''}" x="0" y="0" width="40" height="16" rx="8"></rect>`;
+      inner += `<circle class="track-knob" cx="${on?32:8}" cy="8" r="7"></circle>`;
+      inner += `<text class="track-lbl" x="44" y="12">1</text>`;
+      inner += `</g>`;
+      const armedIn = pendingConnection && pendingConnection.fromNode===node.id;
+      inner += `<circle class="port port-out${armedIn?' armed':''}" data-role="port-out" data-id="${node.id}" cx="${def.w}" cy="${def.h/2}" r="6"></circle>`;
+    } else if(node.type==='OUTPUT'){
+      const v = challengeActive && !challengeReveal ? null : values[node.id];
+      const on = v===1;
+      const txt = v===1?'1': v===0?'0':'?';
+      inner += `<circle class="led-glow" cx="32" cy="${def.h/2}" r="20" style="opacity:${on?0.55:0}"></circle>`;
+      inner += `<circle class="led${on?' on':''}" cx="32" cy="${def.h/2}" r="16"></circle>`;
+      inner += `<text class="led-value" x="32" y="${def.h/2+5}">${txt}</text>`;
+      inner += `<text class="output-label" x="32" y="${def.h}">${node.label}</text>`;
+      const hasWire = Object.values(state.wires).some(w=>w.toNode===node.id && w.toPort===0);
+      inner += `<circle class="port port-in${hasWire?' filled':''}" data-role="port-in" data-id="${node.id}" data-port="0" cx="0" cy="${def.h/2}" r="7"></circle>`;
+    } else {
+      const shape = buildGateShape(node.type, def.w, def.h);
+      inner += gateShapeMarkup(shape);
+      inner += `<text class="gate-label" x="${def.w/2}" y="${def.h+14}">${node.label}</text>`;
+      const nin = def.inputs;
+      for(let i=0;i<nin;i++){
+        const py = nin===1 ? def.h/2 : (i===0? def.h*0.25: def.h*0.75);
+        const hasWire = Object.values(state.wires).some(w=>w.toNode===node.id && w.toPort===i);
+        inner += `<circle class="port port-in${hasWire?' filled':''}" data-role="port-in" data-id="${node.id}" data-port="${i}" cx="0" cy="${py}" r="6"></circle>`;
+      }
+      const outX = node.type==='NOT' ? def.w : def.w;
+      const armedGate = pendingConnection && pendingConnection.fromNode===node.id;
+      inner += `<circle class="port port-out${armedGate?' armed':''}" data-role="port-out" data-id="${node.id}" cx="${outX}" cy="${def.h/2}" r="6"></circle>`;
+    }
+    const cls = `node-group ${node.type==='INPUT'?'input-node':node.type==='OUTPUT'?'output-node':'gate-node'}${sel}`;
+    html += `<g class="${cls}" data-id="${node.id}" transform="translate(${node.x},${node.y})">${inner}</g>`;
+  });
+  nodesLayer.innerHTML = html;
+}
+
+function renderExpression(){
+  const outputs = Object.values(state.nodes).filter(n=>n.type==='OUTPUT').sort((a,b)=>a.label.localeCompare(b.label));
+  const el = document.getElementById('tab-expr');
+  if(!outputs.length){
+    el.innerHTML = `<div class="panel-empty">Connect gates to an output indicator to see its Boolean expression here.</div>`;
+    return;
+  }
+  let html='';
+  outputs.forEach(o=>{
+    const incoming = getIncoming(o.id)[0];
+    const body = incoming ? exprFor(incoming) : '<span style="color:var(--text-2)">not connected</span>';
+    html += `<div class="expr-line"><span class="expr-name">${o.label}</span><span class="expr-body">${o.label} = ${body}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderSteps(values){
+  const el = document.getElementById('tab-steps');
+  const {hasCycle, order} = evaluateAll();
+  if(hasCycle){
+    el.innerHTML = `<div class="panel-empty">This circuit has a loop, so it can't be evaluated step by step. Remove a connection to break the cycle.</div>`;
+    return;
+  }
+  const gateOrder = order.filter(id=> state.nodes[id] && !['INPUT'].includes(state.nodes[id].type));
+  if(!gateOrder.length){
+    el.innerHTML = `<div class="panel-empty">Nothing to evaluate yet — add a gate and connect it to see each step.</div>`;
+    return;
+  }
+  let html='';
+  gateOrder.forEach(id=>{
+    const node = state.nodes[id];
+    const ins = getIncoming(id).map(src=>{
+      if(!src) return {label:'?', val:null};
+      return {label:state.nodes[src].label, val: values[src]};
+    });
+    const insStr = ins.map(i=> `${i.label}=${i.val===null||i.val===undefined?'?':i.val}`).join(', ');
+    const res = values[id];
+    const chipCls = res===1?'on':(res===null||res===undefined?'unknown':'');
+    const resTxt = res===1?'1':res===0?'0':'?';
+    html += `<div class="step-row"><span class="sname">${node.label}</span><span class="sexpr">${node.type}(${insStr})</span><span class="chip ${chipCls}">${resTxt}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderTruthTable(){
+  const el = document.getElementById('tab-truth');
+  const inputs = Object.values(state.nodes).filter(n=>n.type==='INPUT').sort((a,b)=>a.label.localeCompare(b.label));
+  const outputs = Object.values(state.nodes).filter(n=>n.type==='OUTPUT').sort((a,b)=>a.label.localeCompare(b.label));
+  if(!inputs.length || !outputs.length){
+    el.innerHTML = `<div class="panel-empty">Add input switches and an output indicator to generate a truth table.</div>`;
+    return;
+  }
+  const n = inputs.length;
+  const rows = Math.pow(2,n);
+  let html = `<div class="truth-scroll"><table class="truth"><thead><tr>`;
+  inputs.forEach(i=> html += `<th>${i.label}</th>`);
+  outputs.forEach(o=> html += `<th>${o.label}</th>`);
+  html += `</tr></thead><tbody>`;
+  const currentBits = inputs.map(i=> i.value?1:0);
+  for(let r=0;r<rows;r++){
+    const bits = inputs.map((_,i)=> (r >> (n-1-i)) & 1);
+    const overrides={};
+    inputs.forEach((inp,i)=> overrides[inp.id]=bits[i]);
+    const {values, hasCycle} = evaluateAll(overrides);
+    const isCurrent = bits.every((b,i)=>b===currentBits[i]);
+    html += `<tr class="${isCurrent?'current-row':''}">`;
+    bits.forEach(b=> html += `<td>${b}</td>`);
+    outputs.forEach(o=>{
+      const v = hasCycle? '!' : values[o.id];
+      html += `<td class="out-cell${v===1?' on':''}">${v===1?1:v===0?0:'—'}</td>`;
+    });
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+
+function updatePaletteAvailability(){
+  document.querySelectorAll('.pbtn[data-letter]').forEach(btn=>{
+    const letter = btn.dataset.letter;
+    const taken = Object.values(state.nodes).some(n=>n.type==='INPUT'&&n.label===letter);
+    btn.classList.toggle('disabled', taken || challengeActive);
+  });
+  document.querySelectorAll('.pbtn[data-gate], .pbtn[data-output]').forEach(btn=>{
+    btn.classList.toggle('disabled', challengeActive);
+  });
+}
+function updateToolbarState(){
+  document.getElementById('undoBtn').disabled = !historyStack.length || challengeActive;
+  document.getElementById('redoBtn').disabled = !redoStack.length || challengeActive;
+  document.getElementById('deleteBtn').disabled = !selection || challengeActive;
+  document.getElementById('clearBtn').disabled = challengeActive;
+}
+
+/* ============ palette drag ============ */
+function positionGhost(el,x,y){ el.style.left=x+'px'; el.style.top=y+'px'; }
+function setupPaletteDrag(btn, cfg){
+  btn.addEventListener('pointerdown', evt=>{
+    if(btn.classList.contains('disabled')) return;
+    evt.preventDefault();
+    btn.setPointerCapture(evt.pointerId);
+    const ghost=document.createElement('div');
+    ghost.className='drag-ghost';
+    ghost.textContent = cfg.kind==='input'? cfg.letter : cfg.kind==='output'? 'OUT':cfg.type;
+    document.body.appendChild(ghost);
+    positionGhost(ghost, evt.clientX, evt.clientY);
+    function onMove(e){ positionGhost(ghost, e.clientX, e.clientY); }
+    function onUp(e){
+      btn.removeEventListener('pointermove', onMove);
+      ghost.remove();
+      const rect = svg.getBoundingClientRect();
+      if(e.clientX>=rect.left && e.clientX<=rect.right && e.clientY>=rect.top && e.clientY<=rect.bottom){
+        const pt = screenToSVG(e.clientX, e.clientY);
+        addNode(cfg, pt.x, pt.y);
+      }
+    }
+    btn.addEventListener('pointermove', onMove);
+    btn.addEventListener('pointerup', onUp, {once:true});
+    btn.addEventListener('pointercancel', ()=>{ btn.removeEventListener('pointermove',onMove); ghost.remove(); }, {once:true});
+  });
+}
+
+/* ============ canvas interaction ============ */
+function startWireDraw(portOutEl, evt){
+  if(challengeActive) return;
+  evt.stopPropagation();
+  const nodeId = portOutEl.dataset.id;
+  const p = getPortPos(state.nodes[nodeId], 'out', 0);
+  wireDraw = {fromNode:nodeId, x1:p.x, y1:p.y, x2:p.x, y2:p.y};
+  let moved = false;
+  const startX=evt.clientX, startY=evt.clientY;
+  updateTempWire();
+  portOutEl.setPointerCapture(evt.pointerId);
+  function onMove(e){
+    if(!moved && Math.hypot(e.clientX-startX, e.clientY-startY) > 6) moved = true;
+    const pt = screenToSVG(e.clientX, e.clientY);
+    wireDraw.x2=pt.x; wireDraw.y2=pt.y;
+    updateTempWire();
+  }
+  function onUp(e){
+    portOutEl.removeEventListener('pointermove', onMove);
+    wireDraw=null;
+    updateTempWire();
+    if(moved){
+      // dragged onto a target: connect immediately, same as before
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const portIn = el && el.closest ? el.closest('.port-in') : null;
+      if(portIn) completeConnection(nodeId, portIn.dataset.id, parseInt(portIn.dataset.port,10));
+      clearPending();
+    } else {
+      // plain tap: arm this output so the *next* tap finishes the wire —
+      // easier than dragging precisely, especially on a phone
+      if(pendingConnection && pendingConnection.fromNode===nodeId) clearPending();
+      else pendingConnection = {fromNode:nodeId};
+    }
+    renderAll();
+  }
+  portOutEl.addEventListener('pointermove', onMove);
+  portOutEl.addEventListener('pointerup', onUp, {once:true});
+  portOutEl.addEventListener('pointercancel', ()=>{ portOutEl.removeEventListener('pointermove',onMove); wireDraw=null; updateTempWire(); }, {once:true});
+}
+function updateTempWire(){
+  if(!wireDraw){ tempWire.setAttribute('d',''); return; }
+  tempWire.setAttribute('d', wirePathD({x:wireDraw.x1,y:wireDraw.y1},{x:wireDraw.x2,y:wireDraw.y2}));
+}
+
+function startNodeInteraction(nodeEl, evt){
+  if(challengeActive) return;
+  const id = nodeEl.dataset.id;
+  const node = state.nodes[id];
+  if(!node) return;
+  const startSVG = screenToSVG(evt.clientX, evt.clientY);
+  const origX=node.x, origY=node.y;
+  let moved=false, snapshotTaken=false;
+  nodeEl.setPointerCapture(evt.pointerId);
+  function onMove(e){
+    const cur = screenToSVG(e.clientX, e.clientY);
+    const dx = cur.x-startSVG.x, dy = cur.y-startSVG.y;
+    if(!moved && Math.hypot(dx,dy)>5){
+      moved=true;
+      if(!snapshotTaken){ pushHistory(); snapshotTaken=true; }
+    }
+    if(moved){
+      node.x = origX+dx; node.y = origY+dy;
+      renderAll();
+    }
+  }
+  function onUp(){
+    nodeEl.removeEventListener('pointermove', onMove);
+    if(!moved){
+      if(node.type==='INPUT'){ pushHistory(); node.value = !node.value; }
+      selectItem('node', id);
+    } else {
+      selectItem('node', id);
+    }
+    renderAll();
+  }
+  nodeEl.addEventListener('pointermove', onMove);
+  nodeEl.addEventListener('pointerup', onUp, {once:true});
+  nodeEl.addEventListener('pointercancel', ()=>{ nodeEl.removeEventListener('pointermove',onMove); }, {once:true});
+}
+
+svg.addEventListener('pointerdown', evt=>{
+  const portIn = evt.target.closest ? evt.target.closest('.port-in') : null;
+  if(portIn && pendingConnection && !challengeActive){
+    completeConnection(pendingConnection.fromNode, portIn.dataset.id, parseInt(portIn.dataset.port,10));
+    clearPending();
+    renderAll();
+    return;
+  }
+  const portOut = evt.target.closest ? evt.target.closest('.port-out') : null;
+  if(portOut){ startWireDraw(portOut, evt); return; }
+  const wireHit = evt.target.closest ? evt.target.closest('.wire-hit') : null;
+  if(wireHit){ clearPending(); selectItem('wire', wireHit.dataset.id); renderAll(); return; }
+  const nodeEl = evt.target.closest ? evt.target.closest('.node-group') : null;
+  if(nodeEl){ clearPending(); startNodeInteraction(nodeEl, evt); return; }
+  clearPending();
+  deselectAll();
+});
+svg.addEventListener('dblclick', evt=>{
+  if(challengeActive) return;
+  const nodeEl = evt.target.closest ? evt.target.closest('.node-group') : null;
+  if(!nodeEl) return;
+  const node = state.nodes[nodeEl.dataset.id];
+  if(!node || node.type==='INPUT') return;
+  const name = prompt('Rename label:', node.label);
+  if(name && name.trim()){ pushHistory(); node.label = name.trim().slice(0,10); renderAll(); }
+});
+
+/* ============ keyboard ============ */
+window.addEventListener('keydown', evt=>{
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA') return;
+  if((evt.key==='Delete'||evt.key==='Backspace') && selection){ evt.preventDefault(); deleteSelected(); }
+  if((evt.ctrlKey||evt.metaKey) && evt.key.toLowerCase()==='z'){ evt.preventDefault(); if(evt.shiftKey) redo(); else undo(); }
+  if((evt.ctrlKey||evt.metaKey) && evt.key.toLowerCase()==='y'){ evt.preventDefault(); redo(); }
+});
+
+/* ============ toolbar buttons ============ */
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
+document.getElementById('resetBtn').addEventListener('click', resetSwitches);
+document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+document.getElementById('runBtn').addEventListener('click', ()=>{
+  const wrap = document.getElementById('canvasWrapper');
+  wrap.classList.remove('simulate-pulse'); void wrap.offsetWidth; wrap.classList.add('simulate-pulse');
+  renderAll();
+});
+document.getElementById('connectBtn').addEventListener('click', ()=>{
+  if(challengeActive) return;
+  const fromId = document.getElementById('connectFrom').value;
+  const toVal = document.getElementById('connectTo').value;
+  if(!fromId || !toVal) return;
+  const sepIdx = toVal.indexOf(':');
+  const toId = toVal.slice(0,sepIdx), toPort = parseInt(toVal.slice(sepIdx+1),10);
+  clearPending();
+  completeConnection(fromId, toId, toPort);
+  renderAll();
+});
+document.getElementById('connectionList').addEventListener('click', e=>{
+  if(challengeActive) return;
+  const btn = e.target.closest('.conn-del');
+  if(!btn) return;
+  pushHistory();
+  delete state.wires[btn.dataset.wid];
+  if(selection && selection.type==='wire' && selection.id===btn.dataset.wid) selection=null;
+  renderAll();
+});
+
+/* ============ tabs ============ */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+/* ============ help modal ============ */
+const helpModal = document.getElementById('helpModal');
+document.getElementById('helpBtn').addEventListener('click', ()=> helpModal.classList.add('show'));
+document.getElementById('closeHelp').addEventListener('click', ()=> helpModal.classList.remove('show'));
+helpModal.addEventListener('click', e=>{ if(e.target===helpModal) helpModal.classList.remove('show'); });
+
+/* ============ palette build ============ */
+function miniIcon(type){
+  const w=60,h=34;
+  const shape = buildGateShape(type,w,h);
+  let inner = `<path class="gshape" d="${shape.body}"></path>`;
+  if(shape.extra) inner += `<path class="gextra" d="${shape.extra}"></path>`;
+  if(shape.stem) inner += `<path class="gstem" d="${shape.stem}"></path>`;
+  if(shape.bubble) inner += `<circle class="gbubble" cx="${shape.bubble.cx}" cy="${shape.bubble.cy}" r="${shape.bubble.r}"></circle>`;
+  return `<svg viewBox="0 0 ${w} ${h}">${inner}</svg>`;
+}
+const gatePaletteEl = document.getElementById('gatePalette');
+GATE_TYPES.forEach(type=>{
+  const btn = document.createElement('div');
+  btn.className='pbtn';
+  btn.dataset.gate = type;
+  btn.innerHTML = `${miniIcon(type)}<span>${type}</span>`;
+  gatePaletteEl.appendChild(btn);
+  setupPaletteDrag(btn, {kind:'gate', type});
+});
+const inputPaletteEl = document.getElementById('inputPalette');
+['A','B','C','D'].forEach(letter=>{
+  const btn = document.createElement('div');
+  btn.className='pbtn io-btn';
+  btn.dataset.letter = letter;
+  btn.innerHTML = `<span>${letter}</span>`;
+  inputPaletteEl.appendChild(btn);
+  setupPaletteDrag(btn, {kind:'input', letter});
+});
+const outputPaletteEl = document.getElementById('outputPalette');
+{
+  const btn = document.createElement('div');
+  btn.className='pbtn io-btn';
+  btn.dataset.output = '1';
+  btn.innerHTML = `<span>OUTPUT</span>`;
+  outputPaletteEl.appendChild(btn);
+  setupPaletteDrag(btn, {kind:'output'});
+}
+
+/* ============ challenge mode ============ */
+const CHALLENGES = [
+  { name:'Warm-up · AND', inputs:['A','B'],
+    gates:[{lid:'g1',type:'AND', x:420, y:150}],
+    wires:[['A',0,'g1',0],['B',0,'g1',1],['g1',0,'OUT',0]] },
+  { name:'Warm-up · OR', inputs:['A','B'],
+    gates:[{lid:'g1',type:'OR', x:420, y:150}],
+    wires:[['A',0,'g1',0],['B',0,'g1',1],['g1',0,'OUT',0]] },
+  { name:'Single NOT', inputs:['A'],
+    gates:[{lid:'g1',type:'NOT', x:420, y:110}],
+    wires:[['A',0,'g1',0],['g1',0,'OUT',0]] },
+  { name:'AND feeding OR', inputs:['A','B','C'],
+    gates:[{lid:'g1',type:'AND',x:330,y:80},{lid:'g2',type:'OR',x:560,y:170}],
+    wires:[['A',0,'g1',0],['B',0,'g1',1],['g1',0,'g2',0],['C',0,'g2',1],['g2',0,'OUT',0]] },
+  { name:'XOR and AND combine', inputs:['A','B','C','D'],
+    gates:[{lid:'g1',type:'XOR',x:320,y:60},{lid:'g2',type:'AND',x:320,y:300},{lid:'g3',type:'OR',x:600,y:180}],
+    wires:[['A',0,'g1',0],['B',0,'g1',1],['C',0,'g2',0],['D',0,'g2',1],['g1',0,'g3',0],['g2',0,'g3',1],['g3',0,'OUT',0]] },
+  { name:'NAND, NOR, XOR', inputs:['A','B','C'],
+    gates:[{lid:'g1',type:'NAND',x:320,y:60},{lid:'g2',type:'NOR',x:320,y:300},{lid:'g3',type:'XOR',x:600,y:180}],
+    wires:[['A',0,'g1',0],['B',0,'g1',1],['B',0,'g2',0],['C',0,'g2',1],['g1',0,'g3',0],['g2',0,'g3',1],['g3',0,'OUT',0]] },
+];
+const Y_SLOTS=[80,220,360,500];
+
+function loadChallenge(index){
+  const preset = CHALLENGES[index];
+  currentPreset = preset;
+  const idMap={};
+  const newNodes={}, newWires={};
+  preset.inputs.forEach((letter,i)=>{
+    const id=uid('n');
+    idMap[letter]=id;
+    newNodes[id]={id,type:'INPUT',label:letter,x:70,y:Y_SLOTS[i]-26,value: Math.random()<0.5};
+  });
+  preset.gates.forEach(g=>{
+    const id=uid('n');
+    idMap[g.lid]=id;
+    newNodes[id]={id,type:g.type,label:g.type,x:g.x,y:g.y};
+  });
+  const outId=uid('n');
+  idMap['OUT']=outId;
+  newNodes[outId]={id:outId,type:'OUTPUT',label:'OUT',x:780,y:170};
+  preset.wires.forEach(([fl,fp,tl,tp])=>{
+    const wid=uid('w');
+    newWires[wid]={id:wid,fromNode:idMap[fl],toNode:idMap[tl],toPort:tp};
+  });
+  state.nodes=newNodes; state.wires=newWires; selection=null;
+  document.getElementById('challengeTitle').textContent = preset.name;
+  renderAll();
+}
+
+function startChallenge(){
+  clearPending();
+  challengeSaved = snapshot();
+  challengeActive = true;
+  challengeReveal = false;
+  document.getElementById('challengePanel').classList.add('show');
+  document.getElementById('predictRow').style.display='flex';
+  document.getElementById('nextChallengeBtn').style.display='none';
+  document.getElementById('challengeFeedback').className='challenge-feedback';
+  document.getElementById('challengeFeedback').textContent='';
+  document.getElementById('challengeQ').textContent = "Trace the circuit above. What will OUT be for the switches shown?";
+  challengeIndex = Math.floor(Math.random()*CHALLENGES.length);
+  loadChallenge(challengeIndex);
+  updateChallengeScore();
+}
+function nextChallengeRound(){
+  challengeReveal=false;
+  document.getElementById('predictRow').style.display='flex';
+  document.getElementById('nextChallengeBtn').style.display='none';
+  document.getElementById('challengeFeedback').className='challenge-feedback';
+  let idx;
+  do{ idx = Math.floor(Math.random()*CHALLENGES.length); } while(idx===challengeIndex && CHALLENGES.length>1);
+  challengeIndex = idx;
+  loadChallenge(challengeIndex);
+}
+function exitChallenge(){
+  challengeActive=false; challengeReveal=false;
+  document.getElementById('challengePanel').classList.remove('show');
+  if(challengeSaved) applySnap(challengeSaved);
+  challengeSaved=null;
+  renderAll();
+}
+function updateChallengeScore(){
+  document.getElementById('challengeScore').textContent = `Score: ${challengeScore.correct}/${challengeScore.total}`;
+}
+function submitGuess(guess){
+  const {values} = evaluateAll();
+  const outNode = Object.values(state.nodes).find(n=>n.type==='OUTPUT');
+  const actual = values[outNode.id];
+  challengeReveal = true;
+  challengeScore.total++;
+  const correct = (actual===guess);
+  if(correct) challengeScore.correct++;
+  updateChallengeScore();
+  const fb = document.getElementById('challengeFeedback');
+  fb.className = 'challenge-feedback ' + (correct?'correct':'incorrect');
+  const exprHtml = (function(){
+    const incoming = getIncoming(outNode.id)[0];
+    return incoming ? exprFor(incoming) : '?';
+  })();
+  fb.innerHTML = `${correct? 'Correct! ':'Not quite. '} OUT = <span style="font-family:var(--font-mono)">${exprHtml}</span> = <b>${actual===1?1:actual===0?0:'?'}</b>`;
+  document.getElementById('predictRow').style.display='none';
+  document.getElementById('nextChallengeBtn').style.display='block';
+  renderAll();
+}
+document.getElementById('challengeBtn').addEventListener('click', startChallenge);
+document.getElementById('exitChallengeBtn').addEventListener('click', exitChallenge);
+document.getElementById('nextChallengeBtn').addEventListener('click', nextChallengeRound);
+document.getElementById('predictRow').addEventListener('click', e=>{
+  const btn = e.target.closest('.predict-btn');
+  if(!btn) return;
+  submitGuess(parseInt(btn.dataset.guess,10));
+});
+
+/* ============ starter circuit ============ */
+function buildStarterCircuit(){
+  const a=uid('n'), b=uid('n'), g1=uid('n'), out=uid('n');
+  state.nodes[a]={id:a,type:'INPUT',label:'A',x:70,y:110,value:true};
+  state.nodes[b]={id:b,type:'INPUT',label:'B',x:70,y:240,value:false};
+  gateCounters.AND=1;
+  state.nodes[g1]={id:g1,type:'AND',label:'AND1',x:330,y:170};
+  outputCounter=1;
+  state.nodes[out]={id:out,type:'OUTPUT',label:'OUT1',x:560,y:170};
+  const w1=uid('w'), w2=uid('w'), w3=uid('w');
+  state.wires[w1]={id:w1,fromNode:a,toNode:g1,toPort:0};
+  state.wires[w2]={id:w2,fromNode:b,toNode:g1,toPort:1};
+  state.wires[w3]={id:w3,fromNode:g1,toNode:out,toPort:0};
+}
+
+/* ============ init ============ */
+buildStarterCircuit();
+renderAll();
+
+})();
+</script>
+</body>
+</html>
